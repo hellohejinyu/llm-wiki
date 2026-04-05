@@ -1,10 +1,10 @@
 {
   "name": "llm-wiki",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "An LLM-powered personal wiki CLI. Incrementally build and query a persistent, interlinked wiki from your raw sources.",
   "type": "module",
   "bin": {
-    "wiki": "./dist/bin/wiki.js"
+    "wiki": "dist/bin/wiki.js"
   },
   "scripts": {
     "start": "node --experimental-strip-types ./bin/wiki.ts",
@@ -37,9 +37,8 @@
     "node": ">=22.0.0"
   },
   "files": [
-    "bin/",
-    "src/",
-    "templates/"
+    "dist",
+    "templates"
   ],
   "packageManager": "pnpm@10.29.2",
   "dependencies": {
