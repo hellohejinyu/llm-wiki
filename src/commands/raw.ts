@@ -53,15 +53,32 @@ type: ${finalType}
 ---\n\n`;
 
   const fullContent = frontmatter + content;
-  const slug = finalSource.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30);
-  const rawFileName = `${dateStr.replace(/[:.]/g, '-')}-${slug}.md`;
+
+  const now = new Date();
+  const yyyy = now.getFullYear().toString();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const slug = finalSource.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\u4e00-\u9fa5-]/g, '').substring(0, 40);
   
-  const untrackedDir = path.resolve(config.wikiRoot, config.paths.raw, 'untracked');
+  // e.g. raw/untracked/2026/04/05-cc使用技巧.md
+  const rawFileName = `${dd}-${slug}.md`;
+  const untrackedDir = path.resolve(config.wikiRoot, config.paths.raw, 'untracked', yyyy, mm);
   await fs.ensureDir(untrackedDir);
   
   const targetPath = path.join(untrackedDir, rawFileName);
-  await fs.writeFile(targetPath, fullContent, 'utf8');
+  // If a file with the same name already exists (same day, same source), add a counter suffix
+  let finalPath = targetPath;
+  if (await fs.pathExists(finalPath)) {
+    let counter = 2;
+    while (await fs.pathExists(finalPath)) {
+      finalPath = path.join(untrackedDir, `${dd}-${slug}-${counter}.md`);
+      counter++;
+    }
+  }
+  
+  await fs.writeFile(finalPath, fullContent, 'utf8');
 
-  console.log(chalk.green(`\nSaved raw document to ${targetPath}`));
+  const relPath = path.relative(config.wikiRoot, finalPath);
+  console.log(chalk.green(`\nSaved raw document to ${relPath}`));
   console.log(chalk.cyan(`Run 'wiki ingest' next to process it!\n`));
 }

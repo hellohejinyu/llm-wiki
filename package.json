@@ -1,7 +1,7 @@
 {
   "name": "llm-wiki",
-  "version": "0.0.1",
-  "description": "LLM Wiki CLI",
+  "version": "0.1.0",
+  "description": "An LLM-powered personal wiki CLI. Incrementally build and query a persistent, interlinked wiki from your raw sources.",
   "type": "module",
   "bin": {
     "wiki": "./bin/wiki.ts"
@@ -10,9 +10,35 @@
     "start": "node --experimental-strip-types ./bin/wiki.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "llm",
+    "wiki",
+    "knowledge-base",
+    "rag",
+    "cli",
+    "openai",
+    "markdown",
+    "personal-wiki",
+    "karpathy"
+  ],
+  "author": "hellohejinyu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hellohejinyu/llm-wiki.git"
+  },
+  "homepage": "https://github.com/hellohejinyu/llm-wiki#readme",
+  "bugs": {
+    "url": "https://github.com/hellohejinyu/llm-wiki/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "templates/"
+  ],
   "packageManager": "pnpm@10.29.2",
   "dependencies": {
     "chalk": "^5.6.2",

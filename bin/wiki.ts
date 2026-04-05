@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --experimental-strip-types
 import { Command } from 'commander';
 import { loadConfig } from '../src/config/loadConfig.ts';
 import initCmd from '../src/commands/init.ts';

@@ -18,8 +18,22 @@ export default async function ingestCmd(config: Config, file: string | undefined
     return;
   }
 
-  const files = await fs.readdir(untrackedDir);
-  const pendingFiles = files.filter(f => f.endsWith('.md'));
+  // Recursively collect all .md files, returning paths relative to untrackedDir
+  async function collectMdFiles(dir: string, base: string): Promise<string[]> {
+    const results: string[] = [];
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const relPath = base ? `${base}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        results.push(...await collectMdFiles(path.join(dir, entry.name), relPath));
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        results.push(relPath);
+      }
+    }
+    return results;
+  }
+
+  const pendingFiles = await collectMdFiles(untrackedDir, '');
 
   if (pendingFiles.length === 0) {
     console.log(chalk.green('No pending raw files found.'));
@@ -135,11 +149,14 @@ export default async function ingestCmd(config: Config, file: string | undefined
         await wm.executeOperations(plan.operations);
         await wm.appendLog('ingest', `Source: ${selectedFile} | Status: success | Msg: ${plan.log_message || 'Ingested'}`);
         
-        // Move to ingested
-        await fs.ensureDir(ingestedDir);
-        await fs.move(rawPath, path.join(ingestedDir, selectedFile), { overwrite: true });
+        // Move to ingested, preserving YYYY/MM subdirectory structure
+        const destPath = path.join(ingestedDir, selectedFile);
+        await fs.ensureDir(path.dirname(destPath));
+        await fs.move(rawPath, destPath, { overwrite: true });
         
-        console.log(chalk.green(`\n✔ Ingested successfully.`));
+        const ingestedRelPath = path.relative(config.wikiRoot, destPath);
+        console.log(chalk.green(`
+✔ Ingested successfully → ${ingestedRelPath}`));
       } else {
         console.log(chalk.yellow(`Skipped ${selectedFile}.`));
       }
