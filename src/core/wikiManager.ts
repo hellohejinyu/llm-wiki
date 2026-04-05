@@ -31,6 +31,44 @@ export class WikiManager {
     }
   }
 
+  async getPageContents(pageNames: string[]): Promise<Array<{name: string, content: string}>> {
+    const results: Array<{name: string, content: string}> = [];
+    if (!pageNames || pageNames.length === 0) return results;
+
+    const targetNames = new Set(pageNames.map(n => n.toLowerCase().replace(/\.md$/, '')));
+    
+    // Recursive search method
+    async function scanDir(dir: string) {
+      if (!(await fs.pathExists(dir))) return;
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await scanDir(fullPath);
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          const baseName = entry.name.slice(0, -3).toLowerCase();
+          if (targetNames.has(baseName)) {
+             try {
+                const content = await fs.readFile(fullPath, 'utf8');
+                // find the original casing that the user requested
+                const originalName = pageNames.find(n => n.toLowerCase().replace(/\.md$/, '') === baseName) || entry.name;
+                results.push({ name: originalName, content });
+                targetNames.delete(baseName); // Optimization: stop searching once found
+             } catch (e) {
+                 console.warn(`Failed to read page: ${fullPath}`, e);
+             }
+          }
+        }
+      }
+    }
+
+    // Search in wiki and raw/ingested
+    await scanDir(path.join(this.config.wikiRoot, this.config.paths.wiki));
+    await scanDir(path.join(this.config.wikiRoot, this.config.paths.raw, 'ingested'));
+
+    return results;
+  }
+
   async appendLog(action: string, details: string): Promise<void> {
     const logPath = path.join(this.config.wikiRoot, this.config.paths.wiki, 'log.md');
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);

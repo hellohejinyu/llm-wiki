@@ -34,10 +34,10 @@ export default async function rawCmd(config: Config, options: { content?: string
       when: !options.source
     },
     {
-      type: 'list',
+      type: 'rawlist',
       name: 'type',
-      message: 'Content type:',
-      choices: ['article', 'conversation', 'note', 'book-excerpt'],
+      message: 'Content type (Select a number):',
+      choices: ['article', 'conversation', 'note', 'book-excerpt', 'code-snippet', 'other'],
       when: !options.type
     }
   ]);
@@ -49,7 +49,6 @@ export default async function rawCmd(config: Config, options: { content?: string
   const frontmatter = `---
 source: "${finalSource}"
 date: ${dateStr}
-status: pending
 type: ${finalType}
 ---\n\n`;
 

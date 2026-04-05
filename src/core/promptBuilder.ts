@@ -9,10 +9,14 @@ const __dirname = path.dirname(__filename);
 export class PromptBuilder {
   private agentSchemaPath: string;
   private ingestTemplatePath: string;
+  private queryRouterTemplatePath: string;
+  private queryAnswerTemplatePath: string;
 
   constructor() {
     this.agentSchemaPath = path.resolve(__dirname, '../schemas/agent.md');
     this.ingestTemplatePath = path.resolve(__dirname, '../schemas/ingest.prompt.hbs');
+    this.queryRouterTemplatePath = path.resolve(__dirname, '../schemas/query_router.prompt.hbs');
+    this.queryAnswerTemplatePath = path.resolve(__dirname, '../schemas/query_answer.prompt.hbs');
   }
 
   async buildIngestPrompt(data: {
@@ -29,5 +33,23 @@ export class PromptBuilder {
       agentSystemPrompt,
       ...data,
     });
+  }
+
+  async buildQueryRouterPrompt(data: {
+    question: string;
+    indexContent: string;
+  }): Promise<string> {
+    const tplString = await fs.readFile(this.queryRouterTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template(data);
+  }
+
+  async buildQueryAnswerPrompt(data: {
+    question: string;
+    pages: Array<{ name: string; content: string }>;
+  }): Promise<string> {
+    const tplString = await fs.readFile(this.queryAnswerTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template(data);
   }
 }

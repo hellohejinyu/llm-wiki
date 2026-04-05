@@ -57,7 +57,7 @@ export default async function ingestCmd(config: Config, file: string | undefined
     
     try {
       const promptText = await pb.buildIngestPrompt({
-        sourcePath: `raw/untracked/${selectedFile}`,
+        sourcePath: `raw/ingested/${selectedFile}`,
         rawContent,
         indexContent,
         relevantPages: [] // For MVP, we pass empty. Can be expanded text search later.
