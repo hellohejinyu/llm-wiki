@@ -1,0 +1,13 @@
+{
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "apiKey": "YOUR_API_KEY_HERE",
+    "baseUrl": "https://api.openai.com/v1",
+    "temperature": 0.3
+  },
+  "ingest": {
+    "autoCommit": false,
+    "reviewChanges": true
+  }
+}

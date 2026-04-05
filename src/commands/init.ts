@@ -35,15 +35,33 @@ export default async function initCmd(config: Config, options: { force?: boolean
     await fs.ensureDir(rawDir);
     await fs.ensureDir(wikiDir);
 
-    // Copy templates explicitly
+    // Copy core wiki templates explicitly
     const indexDest = path.join(wikiDir, 'index.md');
     const logDest = path.join(wikiDir, 'log.md');
     
     // We assume the CLI has the templates available relative to its install path
-    const cliTemplatesDir = path.resolve(__dirname, '../../templates/wiki');
+    const cliWikiTemplatesDir = path.resolve(__dirname, '../../templates/wiki');
     
-    await fs.copy(path.join(cliTemplatesDir, 'index.md'), indexDest, { overwrite: true });
-    await fs.copy(path.join(cliTemplatesDir, 'log.md'), logDest, { overwrite: true });
+    await fs.copy(path.join(cliWikiTemplatesDir, 'index.md'), indexDest, { overwrite: true });
+    await fs.copy(path.join(cliWikiTemplatesDir, 'log.md'), logDest, { overwrite: true });
+
+    // Copy configuration and gitignore templates explicitly to the root
+    const cliRootTemplatesDir = path.resolve(__dirname, '../../templates');
+    const wikircDest = path.join(config.wikiRoot, '.wikirc.json');
+    const gitignoreDest = path.join(config.wikiRoot, '.gitignore');
+    
+    await fs.copy(path.join(cliRootTemplatesDir, '.wikirc.json'), wikircDest, { overwrite: true });
+    
+    // Only copy gitignore if it doesn't already exist, to avoid breaking existing projects unexpectedly
+    if (!(await fs.pathExists(gitignoreDest))) {
+      await fs.copy(path.join(cliRootTemplatesDir, '_gitignore'), gitignoreDest);
+    } else {
+      // Append if it exists, though could be a bit risky. To be safe, just ensure .wikirc.json is ignored.
+      const existingGitignore = await fs.readFile(gitignoreDest, 'utf8');
+      if (!existingGitignore.includes('.wikirc.json')) {
+        await fs.appendFile(gitignoreDest, '\n.wikirc.json\n');
+      }
+    }
 
     spinner.succeed(chalk.green('LLM Wiki initialized successfully!'));
   } catch (err) {
