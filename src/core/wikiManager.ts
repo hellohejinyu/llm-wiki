@@ -83,6 +83,63 @@ export class WikiManager {
     return results;
   }
 
+  async findRelevantPages(
+    rawContent: string,
+    options: { topN?: number; minScore?: number } = {}
+  ): Promise<Array<{title: string, content: string}>> {
+    const { topN = 5, minScore = 2 } = options;
+    const wikiDir = path.join(this.config.wikiRoot, this.config.paths.wiki);
+
+    // Extract meaningful words (>3 chars) from the raw content
+    const stopWords = new Set(['that', 'this', 'with', 'from', 'they', 'have', 'what', 'when', 'will', 'your', 'into', 'more', 'also', 'just', 'been', 'some', 'than', 'then', 'them', 'were', 'like', 'said', 'each', 'which', 'their', 'there', 'about', 'would', 'these', 'other', 'after', 'using', 'could', 'where', 'those']);
+    const rawWords = new Set(
+      rawContent.toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !stopWords.has(w))
+    );
+
+    // Recursively scan a directory for .md files and score each page
+    const scored: Array<{title: string, content: string, score: number}> = [];
+
+    async function scanAndScore(dir: string) {
+      if (!(await fs.pathExists(dir))) return;
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await scanAndScore(fullPath);
+        } else if (entry.isFile() && entry.name.endsWith('.md') && !['index.md', 'log.md'].includes(entry.name)) {
+          try {
+            const content = await fs.readFile(fullPath, 'utf8');
+            const pageWords = content.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5\s]/g, ' ').split(/\s+/);
+            let score = 0;
+            for (const w of pageWords) {
+              if (rawWords.has(w)) score++;
+            }
+            // Bonus: filename keywords matching also count
+            const nameWords = entry.name.slice(0, -3).toLowerCase().replace(/[-_]/g, ' ').split(' ');
+            for (const w of nameWords) {
+              if (w.length > 3 && rawWords.has(w)) score += 3;
+            }
+            if (score >= minScore) {
+              scored.push({ title: entry.name.slice(0, -3), content, score });
+            }
+          } catch {}
+        }
+      }
+    }
+
+    await scanAndScore(path.join(wikiDir, 'concepts'));
+    await scanAndScore(path.join(wikiDir, 'answers'));
+
+    // Sort by score descending and return top N
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN)
+      .map(({ title, content }) => ({ title, content }));
+  }
+
   async appendLog(action: string, details: string): Promise<void> {
     const logPath = path.join(this.config.wikiRoot, this.config.paths.wiki, 'log.md');
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);

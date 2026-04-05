@@ -57,11 +57,19 @@ export default async function ingestCmd(config: Config, file: string | undefined
     let spinner: any = null;
     
     try {
+      // Find existing wiki pages related to this new content (keyword matching)
+      const relevantPages = await wm.findRelevantPages(rawContent, { topN: 5, minScore: 3 });
+      
+      if (options.debug && relevantPages.length > 0) {
+        console.log(chalk.magenta(`\n[DEBUG] Found ${relevantPages.length} relevant existing pages to pass as context:`));
+        relevantPages.forEach(p => console.log(chalk.gray(`  - ${p.title}`)));
+      }
+
       const promptText = await pb.buildIngestPrompt({
         sourcePath: `raw/ingested/${selectedFile}`,
         rawContent,
         indexContent,
-        relevantPages: [] // For MVP, we pass empty. Can be expanded text search later.
+        relevantPages
       });
 
       if (options.debug) {

@@ -227,7 +227,7 @@ export default async function lintCmd(config: Config, options: { fix?: boolean, 
   // Auto-create stub pages for missing concepts
   const newConceptEntries: Array<{safeName: string, displayName: string}> = [];
   for (const mc of (report.missing_concepts || [])) {
-    const safeName = mc.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const safeName = mc.name.toLowerCase().replace(/[/\\|]/g, '-').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     const stubPath = `wiki/concepts/${safeName}.md`;
     const exists = await fs.pathExists(path.join(config.wikiRoot, stubPath));
     if (!exists) {
