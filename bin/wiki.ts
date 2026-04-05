@@ -40,6 +40,7 @@ async function main() {
     .option('--all', 'Ingest all pending files')
     .option('-y, --yes', 'Skip confirmation')
     .option('--dry-run', 'Show logic plan without writing')
+    .option('-d, --debug', 'Print debug payload sent to LLM')
     .action((file, options) => ingestCmd(config, file, options));
 
   program

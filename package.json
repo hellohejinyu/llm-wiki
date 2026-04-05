@@ -21,6 +21,7 @@
     "fs-extra": "^11.3.4",
     "handlebars": "^4.7.9",
     "inquirer": "^13.3.2",
+    "jsonrepair": "^3.13.3",
     "openai": "^6.33.0",
     "ora": "^9.3.0",
     "remark": "^15.0.1",

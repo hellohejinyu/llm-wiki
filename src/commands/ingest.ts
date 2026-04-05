@@ -3,12 +3,13 @@ import path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
+import { jsonrepair } from 'jsonrepair';
 import { LLMClient } from '../core/llmClient.ts';
 import { PromptBuilder } from '../core/promptBuilder.ts';
 import { WikiManager } from '../core/wikiManager.ts';
 import type { Config } from '../types/index.ts';
 
-export default async function ingestCmd(config: Config, file: string | undefined, options: { all?: boolean, yes?: boolean, dryRun?: boolean }) {
+export default async function ingestCmd(config: Config, file: string | undefined, options: { all?: boolean, yes?: boolean, dryRun?: boolean, debug?: boolean }) {
   const untrackedDir = path.resolve(config.wikiRoot, config.paths.raw, 'untracked');
   const ingestedDir = path.resolve(config.wikiRoot, config.paths.raw, 'ingested');
   
@@ -53,7 +54,7 @@ export default async function ingestCmd(config: Config, file: string | undefined
     const rawContent = await fs.readFile(rawPath, 'utf8');
     const indexContent = await wm.getIndexContent();
 
-    const spinner = ora('Generating wiki operations via LLM...').start();
+    let spinner: any = null;
     
     try {
       const promptText = await pb.buildIngestPrompt({
@@ -63,6 +64,13 @@ export default async function ingestCmd(config: Config, file: string | undefined
         relevantPages: [] // For MVP, we pass empty. Can be expanded text search later.
       });
 
+      if (options.debug) {
+         console.log(chalk.magenta('\n[DEBUG] Submitting the following payload to LLM:\n'));
+         console.log(chalk.gray(promptText));
+         console.log(chalk.magenta('\n[DEBUG] Awaiting LLM response...'));
+      }
+
+      spinner = ora('Generating wiki operations via LLM...').start();
       const response = await llm.chat([{ role: 'user', content: promptText }]);
       spinner.stop();
 
@@ -78,7 +86,19 @@ export default async function ingestCmd(config: Config, file: string | undefined
       }
 
       const rawJson = response.substring(jsonStart, jsonEnd + 1);
-      const plan = JSON.parse(rawJson);
+      
+      let plan: any;
+      try {
+        plan = JSON.parse(rawJson);
+      } catch (parseErr) {
+        console.log(chalk.yellow('\n[DEBUG] LLM JSON malformed, attempting automatic repair using jsonrepair...'));
+        try {
+           const repairedJson = jsonrepair(rawJson);
+           plan = JSON.parse(repairedJson);
+        } catch (repairErr) {
+           throw new Error("Could not parse or repair JSON operations from LLM response:\n" + rawJson);
+        }
+      }
 
       if (!plan.operations || !Array.isArray(plan.operations)) {
         throw new Error("Invalid plan structure from LLM");
@@ -116,7 +136,7 @@ export default async function ingestCmd(config: Config, file: string | undefined
         console.log(chalk.yellow(`Skipped ${selectedFile}.`));
       }
     } catch (err) {
-      spinner.stop();
+      if (spinner) spinner.stop();
       console.error(chalk.red(`\nFailed to ingest ${selectedFile}:`), err);
     }
   }
