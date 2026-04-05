@@ -4,10 +4,12 @@
   "description": "An LLM-powered personal wiki CLI. Incrementally build and query a persistent, interlinked wiki from your raw sources.",
   "type": "module",
   "bin": {
-    "wiki": "./bin/wiki.ts"
+    "wiki": "./dist/bin/wiki.js"
   },
   "scripts": {
     "start": "node --experimental-strip-types ./bin/wiki.ts",
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -58,6 +60,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^25.5.2",
+    "tsup": "^8.5.1",
     "typescript": "^6.0.2"
   }
 }

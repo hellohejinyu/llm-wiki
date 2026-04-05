@@ -1,4 +1,5 @@
-#!/usr/bin/env -S node --experimental-strip-types
+#!/usr/bin/env node
+declare const __PKG_VERSION__: string;
 import { Command } from 'commander';
 import { loadConfig } from '../src/config/loadConfig.ts';
 import initCmd from '../src/commands/init.ts';
@@ -16,7 +17,7 @@ async function main() {
   program
     .name('wiki')
     .description('LLM Wiki CLI')
-    .version('0.0.1');
+    .version(__PKG_VERSION__);
 
   program
     .command('init')
