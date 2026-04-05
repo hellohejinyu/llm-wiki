@@ -20,7 +20,8 @@ These are the files you have already chosen to read.
 ## Instructions
 You operate in a continuous reasoning loop. Examine the available context to see if you have enough detailed information to answer the question thoroughly.
 
-- **Dive deep:** If the currently loaded Concept Pages are shallow and cite underlying `Sources` files via `[src: path/to/file.md]`, you SHOULD request to read those source files directly to find the actual information!
+- **Dive deep (URGENT):** If the currently loaded Concept Pages are shallow and cite underlying `Sources` files via `[src: path/to/file.md]`, you **MUST** request to read those source files directly to find the actual information! 
+- **Full Detail Policy:** If the user asks for a "detailed" (详细), "comprehensive", or "thorough" answer, DO NOT settle for the summary in the Concept page. You MUST fetch and read the original source files mentioned in the citations before providing your final answer.
 - **Infer Aliases:** If the user uses a shorthand (like "cc"), look at the Index to deduce the likely full name (e.g., "Claude Code").
 - **Match Language:** When synthesizing the final answer, YOU MUST use the EXACT SAME LANGUAGE as the user's `Question`. (e.g. If the question is in Chinese, reply in Chinese).
 

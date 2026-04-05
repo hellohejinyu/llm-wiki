@@ -37,12 +37,38 @@ export class WikiManager {
 
     const canonicalize = (n: string) => n.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
 
-    const targetMaps = pageNames.map(original => ({
+    const targets = pageNames.map(original => ({
         original,
-        canon: canonicalize(original.replace(/\.md$/, ''))
+        canon: canonicalize(original.replace(/\.md$/, '')),
+        isPath: original.includes('/') || original.includes('.')
     }));
     
-    // Recursive search method
+    // First, try direct path access for everything that looks like a path
+    for (let i = targets.length - 1; i >= 0; i--) {
+        const t = targets[i];
+        if (t.isPath) {
+            const possiblePaths = [
+                path.resolve(this.config.wikiRoot, t.original),
+                path.resolve(this.config.wikiRoot, this.config.paths.wiki, t.original),
+                path.resolve(this.config.wikiRoot, this.config.paths.raw, 'ingested', t.original)
+            ];
+            
+            for (const p of possiblePaths) {
+                if (await fs.pathExists(p)) {
+                    try {
+                        const content = await fs.readFile(p, 'utf8');
+                        results.push({ name: t.original, content });
+                        targets.splice(i, 1);
+                        break;
+                    } catch {}
+                }
+            }
+        }
+    }
+
+    if (targets.length === 0) return results;
+
+    // Recursive search method for generic page names
     async function scanDir(dir: string) {
       if (!(await fs.pathExists(dir))) return;
       const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -54,20 +80,27 @@ export class WikiManager {
           const baseName = entry.name.slice(0, -3);
           const baseCanon = canonicalize(baseName);
           
-          const matchIndex = targetMaps.findIndex(t => t.canon === baseCanon || t.canon.includes(baseCanon) || baseCanon.includes(t.canon));
+          // Check for exact matches first (best quality)
+          let matchIndex = targets.findIndex(t => t.canon === baseCanon);
           
-          // To be safe from over-fetching (e.g. 'a' matching 'about'), we only allow substring matching if the lengths are somewhat close or it's a clear descriptor difference.
-          // But exact canonical match is always safe.
+          // Fallback to substring matching only if target is not a path-like string
+          if (matchIndex === -1) {
+              matchIndex = targets.findIndex(t => {
+                  if (t.isPath) return false; // Don't fuzzy match paths
+                  return t.canon.includes(baseCanon) || baseCanon.includes(t.canon);
+              });
+          }
+          
           const isSafeMatch = matchIndex !== -1 && (
-              targetMaps[matchIndex].canon === baseCanon || 
-              Math.abs(targetMaps[matchIndex].canon.length - baseCanon.length) > 3 // loose condition for "SSML (Speech...)" vs "ssml"
+              targets[matchIndex].canon === baseCanon || 
+              Math.abs(targets[matchIndex].canon.length - baseCanon.length) > 3
           );
 
           if (isSafeMatch) {
              try {
                 const content = await fs.readFile(fullPath, 'utf8');
-                results.push({ name: targetMaps[matchIndex].original, content });
-                targetMaps.splice(matchIndex, 1); // Optimization: stop searching this particular target once found
+                results.push({ name: targets[matchIndex].original, content });
+                targets.splice(matchIndex, 1); // Optimization: stop searching this particular target once found
              } catch (e) {
                  console.warn(`Failed to read page: ${fullPath}`, e);
              }

@@ -107,9 +107,10 @@ export default async function queryCmd(config: Config, question: string | undefi
                  console.log(chalk.red("Too many recursive misses. Stopping."));
              }
          }
-     } else if (actionData.action === 'answer') {
-         answerContent = actionData.content;
-         break;
+    } else if (actionData.action === 'answer') {
+        if (options.debug) console.log(chalk.magenta(`[DEBUG] Agent Reasoning: ${actionData.reasoning || '(none)'}`));
+        answerContent = actionData.content;
+        break;
      } else {
          console.log(chalk.red(`Unknown action from Agent: ${actionData.action}`));
          return;
