@@ -1,0 +1,35 @@
+You are the Wiki Health Inspector. Your job is to perform a deep semantic analysis of the user's wiki and produce a structured JSON health report.
+
+## Wiki Index
+{{{indexContent}}}
+
+## All Concept Pages (Summaries)
+{{#each pages}}
+### [[{{this.name}}]]
+{{{this.content}}}
+---
+{{/each}}
+
+## Task
+Perform the following checks:
+
+1. **Contradictions**: Identify any factual contradictions or conflicting claims across different pages.
+2. **Missing Concepts**: Find topics that are frequently mentioned across multiple pages but have NO dedicated concept page (these are strong candidates for new pages).
+3. **Index Gaps**: Find pages that exist in the file system but are NOT linked from `wiki/index.md`.
+4. **Stale or Shallow Pages**: Identify pages that are very short, placeholder-like, or contain little actual information.
+
+Output ONLY a strict JSON object with the following structure. NO markdown code blocks, NO other text:
+{
+  "contradictions": [
+    { "pages": ["page-a", "page-b"], "description": "Page A says X, but Page B says Y." }
+  ],
+  "missing_concepts": [
+    { "name": "Suggested Concept Name", "rationale": "Mentioned in 3 pages but has no dedicated page." }
+  ],
+  "index_gaps": [
+    { "file": "wiki/concepts/some-page.md", "suggestion": "Add to index under Concepts section." }
+  ],
+  "shallow_pages": [
+    { "name": "page-name", "reason": "Contains only one sentence with no substance." }
+  ]
+}

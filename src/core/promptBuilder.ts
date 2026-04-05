@@ -10,11 +10,13 @@ export class PromptBuilder {
   private agentSchemaPath: string;
   private ingestTemplatePath: string;
   private queryAgentTemplatePath: string;
+  private lintTemplatePath: string;
 
   constructor() {
     this.agentSchemaPath = path.resolve(__dirname, '../schemas/agent.md');
     this.ingestTemplatePath = path.resolve(__dirname, '../schemas/ingest.prompt.hbs');
     this.queryAgentTemplatePath = path.resolve(__dirname, '../schemas/query_agent.prompt.hbs');
+    this.lintTemplatePath = path.resolve(__dirname, '../schemas/lint.prompt.hbs');
   }
 
   async buildIngestPrompt(data: {
@@ -39,6 +41,15 @@ export class PromptBuilder {
     loadedPages: Array<{ name: string; content: string }>;
   }): Promise<string> {
     const tplString = await fs.readFile(this.queryAgentTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template(data);
+  }
+
+  async buildLintPrompt(data: {
+    indexContent: string;
+    pages: Array<{ name: string; content: string }>;
+  }): Promise<string> {
+    const tplString = await fs.readFile(this.lintTemplatePath, 'utf8');
     const template = Handlebars.compile(tplString);
     return template(data);
   }

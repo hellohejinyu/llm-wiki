@@ -57,6 +57,7 @@ async function main() {
     .command('lint')
     .description('Analyze the wiki for inconsistencies or orphans')
     .option('--fix', 'Automatically apply simple fixes')
+    .option('--skip-llm', 'Only run static analysis, skip LLM call')
     .action((options) => lintCmd(config, options));
 
   program
