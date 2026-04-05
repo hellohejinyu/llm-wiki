@@ -1,8 +1,7 @@
-import fs from 'fs-extra';
-import path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
+import { jsonrepair } from 'jsonrepair';
 import { LLMClient } from '../core/llmClient.ts';
 import { PromptBuilder } from '../core/promptBuilder.ts';
 import { WikiManager } from '../core/wikiManager.ts';
@@ -30,63 +29,103 @@ export default async function queryCmd(config: Config, question: string | undefi
   const wm = new WikiManager(config);
 
   const indexContent = await wm.getIndexContent();
-
-  const routerSpinner = ora('Routing query and searching index...').start();
-  let pagesToRead: string[] = [];
-
-  try {
-     const routerPrompt = await pb.buildQueryRouterPrompt({ question: finalQuestion, indexContent });
-     const routerResponse = await llm.chat([{ role: 'user', content: routerPrompt }]);
-     
-     if (routerResponse) {
-       const jsonStart = routerResponse.indexOf('[');
-       const jsonEnd = routerResponse.lastIndexOf(']');
-       if (jsonStart !== -1 && jsonEnd !== -1) {
-          pagesToRead = JSON.parse(routerResponse.substring(jsonStart, jsonEnd + 1));
-       }
-     }
-     routerSpinner.succeed(chalk.gray(`Found ${pagesToRead.length} relevant pages to scan.`));
-  } catch (err) {
-      routerSpinner.fail('Routing failed.');
-      console.error(err);
-      return;
-  }
-
-  const pages = await wm.getPageContents(pagesToRead);
-  
-  if (options.debug) {
-    console.log(chalk.magenta('\n[DEBUG] LLM Router requested the following links based on index.md:'));
-    if (pagesToRead.length === 0) console.log(chalk.gray('  (None)'));
-    pagesToRead.forEach(p => console.log(chalk.gray(`  - ${p}`)));
-    
-    console.log(chalk.magenta('[DEBUG] Local code successfully resolved and loaded these files:'));
-    if (pages.length === 0) console.log(chalk.gray('  (None)'));
-    pages.forEach(p => {
-       console.log(chalk.gray(`  - ${p.name} (${p.content.length} characters)`));
-    });
-    console.log('');
-  }
-
-  const answerSpinner = ora('Synthesizing answer...').start();
+  const loadedPages: Array<{name: string, content: string}> = [];
   let answerContent = '';
-  try {
-      const answerPrompt = await pb.buildQueryAnswerPrompt({ question: finalQuestion, pages });
-      const answerResponse = await llm.chat([{ role: 'user', content: answerPrompt }]);
-      if (!answerResponse) throw new Error("Empty answer returned");
-      answerContent = answerResponse;
-      answerSpinner.stop();
+  
+  let iteration = 0;
+  const MAX_ITERATIONS = 4;
 
-      console.log(chalk.cyan(`\n================= ANSWER =================\n`));
-      console.log(answerContent);
-      console.log(chalk.cyan(`\n==========================================\n`));
-      
-      await wm.appendLog('query', `Question: "${finalQuestion}" | Pages read: ${pages.length}`);
+  while (iteration < MAX_ITERATIONS) {
+     iteration++;
+     
+     const promptText = await pb.buildQueryAgentPrompt({ 
+        question: finalQuestion, 
+        indexContent, 
+        loadedPages 
+     });
+     
+     if (options.debug) {
+       console.log(chalk.magenta(`\n[DEBUG] Iteration ${iteration} - Loaded ${loadedPages.length} pages in context.`));
+     }
 
-  } catch (err) {
-      answerSpinner.fail('Failed to generate answer.');
-      console.error(err);
+     const spinner = ora(`Agent is thinking (Iteration ${iteration})...`).start();
+     let response: string | null = '';
+     try {
+        response = await llm.chat([{ role: 'user', content: promptText }]);
+        spinner.stop();
+     } catch (err) {
+        spinner.stop();
+        console.error(chalk.red('\nAgent request failed:'), err);
+        return;
+     }
+
+     if (!response) {
+         console.log(chalk.red('\nAgent returned an empty response.'));
+         return;
+     }
+
+     const jsonStart = response.indexOf('{');
+     const jsonEnd = response.lastIndexOf('}');
+     if (jsonStart === -1 || jsonEnd === -1) {
+         console.log(chalk.yellow('\nAgent failed to format output as JSON.'));
+         if (options.debug) console.log(response);
+         return;
+     }
+
+     let actionData: any;
+     const rawJson = response.substring(jsonStart, jsonEnd + 1);
+     try {
+         actionData = JSON.parse(rawJson);
+     } catch(e) {
+         try {
+             actionData = JSON.parse(jsonrepair(rawJson));
+         } catch(e2) {
+             console.log(chalk.red('\nAgent produced malformed JSON that could not be repaired.'));
+             if (options.debug) console.log(rawJson);
+             return;
+         }
+     }
+
+     if (actionData.action === 'read') {
+         if (options.debug) console.log(chalk.magenta(`[DEBUG] Agent Reasoning: ${actionData.reasoning || '(none)'}`));
+         console.log(chalk.blue(`Agent wants to read: ${actionData.pages.join(', ')}`));
+         
+         const newPages = await wm.getPageContents(actionData.pages);
+         const existingNames = new Set(loadedPages.map(p => p.name));
+         let addedCount = 0;
+         
+         for (const p of newPages) {
+             if (!existingNames.has(p.name)) {
+                 loadedPages.push(p);
+                 addedCount++;
+             }
+         }
+         
+         if (addedCount === 0) {
+             console.log(chalk.yellow(`Agent requested pages we couldn't find or already read.`));
+             if (iteration === MAX_ITERATIONS - 1) {
+                 console.log(chalk.red("Too many recursive misses. Stopping."));
+             }
+         }
+     } else if (actionData.action === 'answer') {
+         answerContent = actionData.content;
+         break;
+     } else {
+         console.log(chalk.red(`Unknown action from Agent: ${actionData.action}`));
+         return;
+     }
+  }
+
+  if (!answerContent) {
+      console.log(chalk.red("Failed to generate an answer within the iteration limit."));
       return;
   }
+
+  console.log(chalk.cyan(`\n================= ANSWER =================\n`));
+  console.log(answerContent);
+  console.log(chalk.cyan(`\n==========================================\n`));
+  
+  await wm.appendLog('query', `Question: "${finalQuestion}" | Iterations: ${iteration} | Pages read: ${loadedPages.length}`);
 
   if (options.noSave) return;
 
