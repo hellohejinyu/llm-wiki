@@ -27,9 +27,8 @@ export class LLMClient {
       model: this.config.llm.model,
       messages,
       temperature: this.config.llm.temperature,
-      // Forcing JSON output based on the agent schema if needed
-      // response_format: { type: "json_object" } 
-    });
+      thinking: this.config.llm.thinking,
+    } as any);
 
     return response.choices[0]?.message?.content || null;
   }

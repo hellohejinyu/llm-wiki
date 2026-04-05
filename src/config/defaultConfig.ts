@@ -6,6 +6,9 @@ export const defaultConfig: Config = {
     provider: 'openai',
     model: 'gpt-4o',
     temperature: 0.3,
+    thinking: {
+      type: 'disabled',
+    },
   },
   paths: {
     raw: 'raw',

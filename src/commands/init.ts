@@ -47,19 +47,19 @@ export default async function initCmd(config: Config, options: { force?: boolean
 
     // Copy configuration and gitignore templates explicitly to the root
     const cliRootTemplatesDir = path.resolve(__dirname, '../../templates');
-    const wikircDest = path.join(config.wikiRoot, '.wikirc.json');
+    const wikircDest = path.join(config.wikiRoot, '.wikirc.yaml');
     const gitignoreDest = path.join(config.wikiRoot, '.gitignore');
     
-    await fs.copy(path.join(cliRootTemplatesDir, '.wikirc.json'), wikircDest, { overwrite: true });
+    await fs.copy(path.join(cliRootTemplatesDir, '.wikirc.yaml'), wikircDest, { overwrite: true });
     
     // Only copy gitignore if it doesn't already exist, to avoid breaking existing projects unexpectedly
     if (!(await fs.pathExists(gitignoreDest))) {
       await fs.copy(path.join(cliRootTemplatesDir, '_gitignore'), gitignoreDest);
     } else {
-      // Append if it exists, though could be a bit risky. To be safe, just ensure .wikirc.json is ignored.
+      // Append if it exists, though could be a bit risky. To be safe, just ensure .wikirc.yaml is ignored.
       const existingGitignore = await fs.readFile(gitignoreDest, 'utf8');
-      if (!existingGitignore.includes('.wikirc.json')) {
-        await fs.appendFile(gitignoreDest, '\n.wikirc.json\n');
+      if (!existingGitignore.includes('.wikirc.yaml')) {
+        await fs.appendFile(gitignoreDest, '\n.wikirc.yaml\n');
       }
     }
 

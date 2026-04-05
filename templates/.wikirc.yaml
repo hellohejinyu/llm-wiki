@@ -5,3 +5,5 @@ llm:
   apiKey: YOUR_API_KEY_HERE
   baseUrl: https://api.openai.com/v1
   temperature: 0.3 # Lower temperature for more consistent output
+  thinking:
+    type: disabled # Toggle for reasoning/thinking models (e.g., o1/o3)
