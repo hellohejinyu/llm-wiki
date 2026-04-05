@@ -1,0 +1,47 @@
+{{{agentSystemPrompt}}}
+
+---
+
+Here is a new raw document that the user has added to the system. You need to ingest it into the wiki.
+
+## Raw Source Material
+Path: {{{sourcePath}}}
+{{{rawContent}}}
+
+---
+
+## Current Wiki Index
+The structured table of contents for the existing wiki:
+{{{indexContent}}}
+
+{{#if relevantPages}}
+## Relevant Existing Wiki Pages
+Here are the contents of some existing wiki pages that might be highly related to this new document:
+{{#each relevantPages}}
+
+### [[{{this.title}}]]
+{{{this.content}}}
+{{/each}}
+{{/if}}
+
+---
+
+## Task
+Process the `Raw Source Material` and figure out how to update the wiki. You will probably need to create new concept/entity pages or incrementally update existing ones (especially the `Relevant Existing Wiki Pages`). And you MUST update the Wiki Index in `wiki/index.md` to reflect these changes.
+
+Output your response EXACTLY as a valid JSON object matching the following structure. NO markdown code blocks, NO textual explanation, JUST the JSON object:
+{
+  "operations": [
+    { 
+      "type": "create", 
+      "path": "wiki/concepts/some_concept.md", 
+      "content": "# Some Concept\n\nExplanation... [src: {{{sourcePath}}}]" 
+    },
+    { 
+      "type": "update", 
+      "path": "wiki/index.md", 
+      "content": "The COMPLETE exact text of what the index file should look like AFTER your changes" 
+    }
+  ],
+  "log_message": "Ingested source and created concept X"
+}
