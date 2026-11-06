@@ -7,7 +7,7 @@ import { PromptBuilder } from '../core/promptBuilder.ts';
 import { WikiManager } from '../core/wikiManager.ts';
 import type { Config } from '../types/index.ts';
 
-export default async function queryCmd(config: Config, question: string | undefined, options: { save?: boolean, page?: string, noSave?: boolean, debug?: boolean }) {
+export default async function queryCmd(config: Config, question: string | undefined, options: { save?: boolean, page?: string, debug?: boolean }) {
   let finalQuestion = question;
   
   if (!finalQuestion) {
@@ -128,7 +128,7 @@ export default async function queryCmd(config: Config, question: string | undefi
   
   await wm.appendLog('query', `Question: "${finalQuestion}" | Iterations: ${iteration} | Pages read: ${loadedPages.length}`);
 
-  if (options.noSave) return;
+  if (options.save === false) return;
 
   let confirmSave = options.save;
   if (!confirmSave) {
